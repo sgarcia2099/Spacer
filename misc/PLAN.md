@@ -2,11 +2,13 @@
 
 ## Project status
 
-**Input validation, idempotent RAW-to-mzML conversion, and scan-level mzML /
-Proteome Discoverer reconciliation are implemented; manual reconciliation
-verification and chimericity scoring remain pending.**
+**Input validation, idempotent RAW-to-mzML conversion, scan-level mzML /
+Proteome Discoverer reconciliation, and initial independent MS1 scoring are
+implemented and manually checked. Analysis reports, Validation diagnostics,
+optional PD agreement, and opt-in inspection are implemented; final manual
+review and release preparation remain.**
 
-The scope is now one experimental group. The repository has three Thermo RAW technical replicates and their Proteome Discoverer exports in `example_data/`. The repository now provides a packaged `spacer` CLI with `doctor`, `single`, `validate`, `convert`, and `reconcile` commands. It validates input bundles, converts only unmatched RAW files through ProteoWizard Docker, writes conversion provenance, structurally validates mzML, and reconciles exact MS2 scan numbers with Proteome Discoverer exports. It does not yet calculate chimericity.
+The scope is now one experimental group. The repository has three Thermo RAW technical replicates and their Proteome Discoverer exports in `example_data/`. The repository now provides a packaged `spacer` CLI with `doctor`, `single`, `validate`, `convert`, `reconcile`, and `score` commands. It validates input bundles, converts only unmatched RAW files through ProteoWizard Docker, writes conversion provenance, structurally validates mzML, reconciles exact MS2 scan numbers with Proteome Discoverer exports, and implements an initial independent mzML-only MS1 precursor-interference score. Visual review is the next required stage.
 
 ## Scope: Single mode
 
@@ -133,19 +135,27 @@ An explicit, scan-specific action creates an MS1 isolation-window stick view, MS
 
 1. **Complete:** Create package metadata, CLI, and `spacer doctor`.
 2. **Complete:** Implement complete single-run bundle discovery and structural header validation.
-3. **Implemented; pending manual conversion check:** Implement idempotent RAW-to-mzML conversion, provenance, and basic MS1/MS2 structural validation.
-4. **Implemented; pending manual reconciliation check:** Parse and validate all three Proteome Discoverer exports and exact scan joins.
-5. Implement memory-efficient mzML reading and independent envelope scoring.
-6. Implement Single and Validation reports, including technical-replicate group summaries.
-7. Implement Proteome Discoverer agreement tables and discordant-scan list.
-8. Implement explicit inspection and manual-review import.
-9. Add controlled tests, then run the three SC1 technical replicates only after validation succeeds.
+3. **Complete:** Implement and manually verify idempotent RAW-to-mzML conversion, provenance, and basic MS1/MS2 structural validation.
+4. **Complete:** Parse, validate, and manually verify all three Proteome Discoverer exports and exact scan joins.
+5. **Complete:** Implement and manually verify memory-efficient mzML reading,
+   independent envelope scoring, co-elution support, and a prespecified
+   sensitivity grid.
+6. **Complete:** Implement descriptive Single-group Analysis reports and
+   detailed Validation diagnostics, including technical-replicate summaries.
+7. **Complete:** Implement optional exact-scan Proteome Discoverer agreement
+   tables and discordant-scan list.
+8. **Implemented; manual review pending:** Implement explicit inspection
+   candidate selection, replicate-balanced selection option, scan-specific
+   coordinate export, and optional PNG/SVG rendering. Plot rendering remains
+   strictly opt-in.
+9. **Complete:** Add controlled tests and run the three SC1 technical
+   replicates after validation succeeds.
 
 ## Completion checklist
 
 - [x] Complete bundles are discovered for R1, R2, and R3; required export headers are present.
 - [x] Raw and external-result scan IDs are reconciled with explicit accounting.
-- [ ] Spacer scoring does not consume vendor interference values.
-- [ ] Proteome Discoverer correlation is optional, scan-matched, and separate.
-- [ ] Group summaries are descriptive only.
-- [ ] Validation is complete and plotting remains opt-in.
+- [x] Spacer scoring does not consume vendor interference values.
+- [x] Proteome Discoverer correlation is optional, scan-matched, and separate.
+- [x] Group summaries are descriptive only.
+- [x] Validation is complete and plotting remains opt-in.

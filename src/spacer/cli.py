@@ -11,9 +11,21 @@ import sys
 from pathlib import Path
 
 from . import __version__
+from .agreement import AgreementError, agreement_for_bundles
 from .bundles import BundleValidationError, discover_bundles
 from .conversion import ConversionError, convert_raw, existing_mzml_provenance, plan_conversions
+from .inspection import (
+    InspectionError,
+    export_scan_coordinates,
+    read_discordant_rows,
+    read_score_rows,
+    render_scan_plot,
+    select_candidates,
+)
 from .reconciliation import ReconciliationError, reconcile_bundle
+from .reporting import ReportingError, build_analysis, write_tsv
+from .scoring import ScoringError, score_bundle, sensitivity_summary
+from .validation import ValidationError, validate_completed_analysis, write_validation
 
 
 PWIZ_IMAGE = "proteowizard/pwiz-skyline-i-agree-to-the-vendor-licenses"
@@ -62,6 +74,53 @@ def _build_parser() -> argparse.ArgumentParser:
     reconcile.add_argument("--q-value-cutoff", type=float, default=0.01, help="PSM q-value cutoff used to mark an MS2 as identified (default: 0.01).")
     reconcile.add_argument("--rt-tolerance-seconds", type=float, default=1.0, help="Exact-scan metadata RT tolerance in seconds (default: 1.0).")
     reconcile.add_argument("--precursor-mz-tolerance-da", type=float, default=0.01, help="Exact-scan precursor m/z tolerance in Da (default: 0.01).")
+    score = commands.add_parser("score", help="Calculate independent MS1-based precursor interference scores.")
+    score.add_argument("--input-dir", type=Path, required=True, help="Flat directory of converted Single-mode bundles.")
+    score.add_argument("--output-dir", type=Path, required=True, help="Directory for independent scoring TSV outputs.")
+    score.add_argument("--interference-threshold", type=float, default=0.30, help="Likely-chimeric interference threshold (default: 0.30).")
+    score.add_argument("--ppm-tolerance", type=float, default=15.0, help="MS1 peak matching tolerance in ppm (default: 15).")
+    score.add_argument("--max-isotopes", type=int, default=6, help="Maximum isotope offsets examined per envelope (default: 6).")
+    score.add_argument("--previous-ms1-scans", type=int, default=3, help="Previous MS1 scans retained for persistence evidence (default: 3).")
+    score.add_argument("--minimum-competitor-prior-ms1-detections", type=int, default=2, help="MS1 detections required for a competing envelope to be considered co-eluting (default: 2).")
+    score.add_argument("--sensitivity-thresholds", default="0.20,0.30,0.40", help="Comma-separated, prespecified interference thresholds for sensitivity_summary.tsv (default: 0.20,0.30,0.40).")
+    inspect = commands.add_parser(
+        "inspect", help="Select manual-review candidates or export coordinates for one chosen MS2."
+    )
+    inspect.add_argument("--input-dir", type=Path, required=True, help="Flat directory of converted Single-mode bundles.")
+    inspect.add_argument("--scoring-table", type=Path, required=True, help="ms2_chimericity.tsv produced by spacer score.")
+    inspect.add_argument("--output-dir", type=Path, required=True, help="Directory for opt-in inspection outputs.")
+    inspect.add_argument("--select-candidates", action="store_true", help="Write representative candidate rows; does not generate plots.")
+    inspect.add_argument("--balance-runs", action="store_true", help="When selecting candidates, represent each run before selecting repeats.")
+    inspect.add_argument("--agreement-table", type=Path, help="Optional pd_agreement.tsv used to add PD-discordant candidates.")
+    inspect.add_argument("--plot", action="store_true", help="Render PNG and SVG for one explicitly selected scan.")
+    inspect.add_argument("--run-basename", help="Run basename for one explicit coordinate export.")
+    inspect.add_argument("--scan-id", type=int, help="MS2 scan number for one explicit coordinate export.")
+    inspect.add_argument("--per-category", type=int, default=5, help="Candidate rows per category (default: 5).")
+    inspect.add_argument("--interference-threshold", type=float, default=0.30, help="Score threshold used for threshold-adjacent candidates (default: 0.30).")
+    inspect.add_argument("--ppm-tolerance", type=float, default=15.0, help="Envelope annotation tolerance in ppm (default: 15).")
+    inspect.add_argument("--max-isotopes", type=int, default=6, help="Maximum isotope offsets for target annotation (default: 6).")
+    inspect.add_argument("--window-margin-mz", type=float, default=0.5, help="Additional m/z shown on either side of the MS1 isolation window (default: 0.5).")
+    analyze = commands.add_parser(
+        "analyze", help="Create concise descriptive Single-mode reports from completed scoring outputs."
+    )
+    analyze.add_argument("--scoring-dir", type=Path, required=True, help="Directory containing score TSV outputs.")
+    analyze.add_argument("--output-dir", type=Path, required=True, help="Directory for concise Analysis reports.")
+    validation = commands.add_parser(
+        "validation", help="Run detailed structural and arithmetic diagnostics on completed Single-mode outputs."
+    )
+    validation.add_argument("--input-dir", type=Path, required=True, help="Flat directory of converted Single-mode bundles.")
+    validation.add_argument("--scoring-dir", type=Path, required=True, help="Directory containing score TSV outputs.")
+    validation.add_argument("--reconciliation-dir", type=Path, help="Optional directory containing reconciliation TSV outputs.")
+    validation.add_argument("--agreement-dir", type=Path, help="Optional directory containing PD agreement TSV outputs.")
+    validation.add_argument("--output-dir", type=Path, required=True, help="Directory for Validation diagnostics.")
+    agreement = commands.add_parser(
+        "agreement", help="Describe exact-scan agreement with optional PD interference exports."
+    )
+    agreement.add_argument("--input-dir", type=Path, required=True, help="Flat directory of converted Single-mode bundles.")
+    agreement.add_argument("--scoring-dir", type=Path, required=True, help="Directory containing ms2_chimericity.tsv.")
+    agreement.add_argument("--output-dir", type=Path, required=True, help="Directory for descriptive PD agreement outputs.")
+    agreement.add_argument("--q-value-cutoff", type=float, default=0.01, help="PD PSM q-value cutoff for identified subsets (default: 0.01).")
+    agreement.add_argument("--top-discordant", type=int, default=20, help="Discordant finite scans retained per run (default: 20).")
     return parser
 
 
@@ -156,7 +215,7 @@ def _run_bundle_validation(args: argparse.Namespace) -> int:
     else:
         manifest = _write_manifest(args.output_dir, rows)
         print(f"Wrote input manifest: {manifest}")
-    print("Input validation is complete. RAW conversion and chimericity scoring are not implemented in this milestone.")
+    print("Input validation is complete. Continue with `spacer convert`, `spacer reconcile`, and `spacer score` as applicable.")
     return 0
 
 
@@ -263,7 +322,185 @@ def _run_reconciliation(args: argparse.Namespace) -> int:
     )
     print(f"Wrote: {args.output_dir / 'scan_reconciliation.tsv'}")
     print(f"Wrote: {args.output_dir / 'scan_reconciliation_summary.tsv'}")
-    print("Reconciliation is complete. Spacer chimericity scoring is not implemented in this milestone.")
+    print("Reconciliation is complete. Use `spacer score` for independent mzML-based scoring.")
+    return 0
+
+
+def _run_scoring(args: argparse.Namespace) -> int:
+    if not 0 <= args.interference_threshold <= 1:
+        print("error: --interference-threshold must be between 0 and 1.", file=sys.stderr)
+        return 2
+    if args.ppm_tolerance <= 0 or args.max_isotopes < 1 or args.previous_ms1_scans < 1 or args.minimum_competitor_prior_ms1_detections < 1:
+        print("error: ppm tolerance, max isotopes, previous MS1 scans, and minimum competitor detections must be positive.", file=sys.stderr)
+        return 2
+    try:
+        thresholds = tuple(sorted({float(value.strip()) for value in args.sensitivity_thresholds.split(",")}))
+        if not thresholds or any(not 0 <= threshold <= 1 for threshold in thresholds):
+            raise ValueError
+        if args.interference_threshold not in thresholds:
+            print("error: --sensitivity-thresholds must include --interference-threshold.", file=sys.stderr)
+            return 2
+        bundles = discover_bundles(input_path=None, input_dir=args.input_dir)
+        all_rows: list[dict[str, str]] = []
+        summaries: list[dict[str, str]] = []
+        sensitivity_rows: list[dict[str, str]] = []
+        for bundle in bundles:
+            print(f"Scoring {bundle.run_basename} from {bundle.data_path.name}...", flush=True)
+            rows, summary = score_bundle(
+                bundle,
+                interference_threshold=args.interference_threshold,
+                ppm_tolerance=args.ppm_tolerance,
+                max_isotopes=args.max_isotopes,
+                previous_ms1_scans=args.previous_ms1_scans,
+                minimum_competitor_prior_ms1_detections=args.minimum_competitor_prior_ms1_detections,
+            )
+            all_rows.extend(rows)
+            summaries.append(summary)
+            sensitivity_rows.extend(sensitivity_summary(
+                rows,
+                thresholds=thresholds,
+                minimum_competitor_prior_ms1_detections=args.minimum_competitor_prior_ms1_detections,
+            ))
+    except (BundleValidationError, ScoringError, ValueError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    _write_tsv(args.output_dir / "ms2_chimericity.tsv", all_rows)
+    _write_tsv(args.output_dir / "run_summary.tsv", summaries)
+    _write_tsv(args.output_dir / "sensitivity_summary.tsv", sensitivity_rows)
+    print(f"Independently scored {len(all_rows)} MS2 scans across {len(summaries)} run(s).")
+    print(f"Wrote: {args.output_dir / 'ms2_chimericity.tsv'}")
+    print(f"Wrote: {args.output_dir / 'run_summary.tsv'}")
+    print(f"Wrote: {args.output_dir / 'sensitivity_summary.tsv'}")
+    print("Proteome Discoverer values were not read for this scoring calculation.")
+    return 0
+
+
+def _run_inspection(args: argparse.Namespace) -> int:
+    if not 0 <= args.interference_threshold <= 1:
+        print("error: --interference-threshold must be between 0 and 1.", file=sys.stderr)
+        return 2
+    if args.per_category < 1 or args.ppm_tolerance <= 0 or args.max_isotopes < 1 or args.window_margin_mz < 0:
+        print("error: inspection counts/tolerances must be positive (window margin may be zero).", file=sys.stderr)
+        return 2
+    choosing_candidates = args.select_candidates
+    choosing_scan = args.run_basename is not None or args.scan_id is not None
+    if choosing_candidates == choosing_scan:
+        print("error: select either --select-candidates or both --run-basename and --scan-id.", file=sys.stderr)
+        return 2
+    if choosing_scan and (args.run_basename is None or args.scan_id is None):
+        print("error: coordinate export requires both --run-basename and --scan-id.", file=sys.stderr)
+        return 2
+    try:
+        rows = read_score_rows(args.scoring_table)
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+        if choosing_candidates:
+            if args.plot:
+                print("error: --plot requires one explicit --run-basename/--scan-id pair.", file=sys.stderr)
+                return 2
+            candidates = select_candidates(
+                rows,
+                interference_threshold=args.interference_threshold,
+                per_category=args.per_category,
+                balance_runs=args.balance_runs,
+                discordant_rows=read_discordant_rows(args.agreement_table) if args.agreement_table else None,
+            )
+            _write_tsv(args.output_dir / "inspection_candidates.tsv", candidates)
+            print(f"Wrote {len(candidates)} opt-in inspection candidates: {args.output_dir / 'inspection_candidates.tsv'}")
+            print("No plots were generated.")
+            return 0
+        matching_rows = [
+            row for row in rows
+            if row["run_basename"] == args.run_basename and row["scan_id"] == str(args.scan_id)
+        ]
+        if len(matching_rows) != 1:
+            raise InspectionError(
+                f"Expected one scoring row for run {args.run_basename!r}, scan {args.scan_id}; found {len(matching_rows)}."
+            )
+        bundles = discover_bundles(input_path=None, input_dir=args.input_dir)
+        matching_bundles = [bundle for bundle in bundles if bundle.run_basename == args.run_basename]
+        if len(matching_bundles) != 1:
+            raise InspectionError(f"Could not find one converted mzML bundle for run {args.run_basename!r}.")
+        paths = export_scan_coordinates(
+            matching_bundles[0],
+            score_row=matching_rows[0],
+            output_dir=args.output_dir,
+            ppm_tolerance=args.ppm_tolerance,
+            max_isotopes=args.max_isotopes,
+            window_margin_mz=args.window_margin_mz,
+        )
+        plot_paths = render_scan_plot(paths) if args.plot else None
+    except (BundleValidationError, InspectionError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    print(f"Wrote MS1-window coordinates: {paths['ms1']}")
+    print(f"Wrote MS2 coordinates: {paths['ms2']}")
+    print(f"Wrote inspection metadata: {paths['metadata']}")
+    if plot_paths is None:
+        print("No plot was generated; rerun with --plot to render an explicit PNG and SVG.")
+    else:
+        print(f"Wrote inspection PNG: {plot_paths['png']}")
+        print(f"Wrote inspection SVG: {plot_paths['svg']}")
+    return 0
+
+
+def _run_analysis(args: argparse.Namespace) -> int:
+    try:
+        analysis_rows, sensitivity_rows, report = build_analysis(args.scoring_dir)
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+        write_tsv(args.output_dir / "analysis_summary.tsv", analysis_rows)
+        write_tsv(args.output_dir / "sensitivity_group_summary.tsv", sensitivity_rows)
+        (args.output_dir / "analysis_report.md").write_text(report, encoding="utf-8")
+    except ReportingError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    print(f"Wrote: {args.output_dir / 'analysis_summary.tsv'}")
+    print(f"Wrote: {args.output_dir / 'sensitivity_group_summary.tsv'}")
+    print(f"Wrote: {args.output_dir / 'analysis_report.md'}")
+    print("Analysis is descriptive for one technical-replicate group; no method comparison was performed.")
+    return 0
+
+
+def _run_validation_mode(args: argparse.Namespace) -> int:
+    try:
+        bundles = discover_bundles(input_path=None, input_dir=args.input_dir)
+        checks, report = validate_completed_analysis(
+            bundles,
+            args.scoring_dir,
+            args.reconciliation_dir,
+            args.agreement_dir,
+        )
+        write_validation(args.output_dir, checks, report)
+    except (BundleValidationError, ValidationError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    print(f"Validation passed: {len(checks)} checks.")
+    print(f"Wrote: {args.output_dir / 'validation_checks.tsv'}")
+    print(f"Wrote: {args.output_dir / 'validation_report.md'}")
+    print("Validation reports diagnostics only; it does not change Spacer scores or classifications.")
+    return 0
+
+
+def _run_agreement(args: argparse.Namespace) -> int:
+    try:
+        bundles = discover_bundles(input_path=None, input_dir=args.input_dir)
+        rows, summaries, discordant = agreement_for_bundles(
+            bundles,
+            args.scoring_dir / "ms2_chimericity.tsv",
+            q_value_cutoff=args.q_value_cutoff,
+            top_discordant=args.top_discordant,
+        )
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+        write_tsv(args.output_dir / "pd_agreement.tsv", rows)
+        write_tsv(args.output_dir / "pd_agreement_summary.tsv", summaries)
+        write_tsv(args.output_dir / "pd_discordant_candidates.tsv", discordant)
+    except (BundleValidationError, AgreementError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    print(f"Wrote: {args.output_dir / 'pd_agreement.tsv'}")
+    print(f"Wrote: {args.output_dir / 'pd_agreement_summary.tsv'}")
+    print(f"Wrote: {args.output_dir / 'pd_discordant_candidates.tsv'}")
+    print("PD agreement is descriptive reference context only; it did not modify Spacer scores or classifications.")
     return 0
 
 
@@ -276,6 +513,16 @@ def main(argv: list[str] | None = None) -> int:
         return _run_conversion(args)
     if args.command == "reconcile":
         return _run_reconciliation(args)
+    if args.command == "score":
+        return _run_scoring(args)
+    if args.command == "inspect":
+        return _run_inspection(args)
+    if args.command == "analyze":
+        return _run_analysis(args)
+    if args.command == "validation":
+        return _run_validation_mode(args)
+    if args.command == "agreement":
+        return _run_agreement(args)
     return _run_bundle_validation(args)
 
 
