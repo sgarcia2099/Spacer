@@ -1,0 +1,20 @@
+run_basename	component	severity	status	detail
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R1	bundle	info	pass	Complete Single-mode bundle discovered.
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R1	mzml_structure	info	pass	MS1=25731; MS2=85417; total=111148.
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R1	score_rows	info	pass	85417 unique MS2 score rows agree with mzML and run summary.
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R1	score_values	info	pass	Classifications, fractions, and indeterminate reasons are internally consistent.
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R2	bundle	info	pass	Complete Single-mode bundle discovered.
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R2	mzml_structure	info	pass	MS1=25714; MS2=85241; total=110955.
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R2	score_rows	info	pass	85241 unique MS2 score rows agree with mzML and run summary.
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R2	score_values	info	pass	Classifications, fractions, and indeterminate reasons are internally consistent.
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R3	bundle	info	pass	Complete Single-mode bundle discovered.
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R3	mzml_structure	info	pass	MS1=25769; MS2=85099; total=110868.
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R3	score_rows	info	pass	85099 unique MS2 score rows agree with mzML and run summary.
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R3	score_values	info	pass	Classifications, fractions, and indeterminate reasons are internally consistent.
+single_group	sensitivity_grid	info	pass	Validated 3 prespecified threshold(s): 0.2, 0.3, 0.4.
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R1	reconciliation	info	pass	mzML MS2=85417; PD MS2=85392; union scan keys=85417.
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R2	reconciliation	info	pass	mzML MS2=85241; PD MS2=85221; union scan keys=85241.
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R3	reconciliation	info	pass	mzML MS2=85099; PD MS2=85079; union scan keys=85099.
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R1	pd_agreement	info	pass	Matched finite=82583; PD missing=0; Spacer indeterminate=2809.
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R2	pd_agreement	info	pass	Matched finite=82421; PD missing=0; Spacer indeterminate=2800.
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R3	pd_agreement	info	pass	Matched finite=82170; PD missing=0; Spacer indeterminate=2909.

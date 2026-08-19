@@ -11,19 +11,31 @@ import sys
 from pathlib import Path
 
 from . import __version__
-from .agreement import AgreementError, agreement_for_bundles
+from .agreement import (
+    AGREEMENT_FIELDS,
+    AGREEMENT_SUMMARY_FIELDS,
+    AgreementError,
+    agreement_for_bundles,
+)
 from .bundles import BundleValidationError, discover_bundles
 from .conversion import ConversionError, convert_raw, existing_mzml_provenance, plan_conversions
 from .inspection import (
     InspectionError,
+    collect_scan_plot_data,
     export_scan_coordinates,
     read_discordant_rows,
     read_score_rows,
     render_scan_plot,
     select_candidates,
 )
+from .html_report import write_html_report
 from .reconciliation import ReconciliationError, reconcile_bundle
-from .reporting import ReportingError, build_analysis, write_tsv
+from .reporting import (
+    ReportingError,
+    build_analysis,
+    summarize_interference_distribution,
+    write_tsv,
+)
 from .scoring import ScoringError, score_bundle, sensitivity_summary
 from .validation import ValidationError, validate_completed_analysis, write_validation
 
@@ -121,6 +133,17 @@ def _build_parser() -> argparse.ArgumentParser:
     agreement.add_argument("--output-dir", type=Path, required=True, help="Directory for descriptive PD agreement outputs.")
     agreement.add_argument("--q-value-cutoff", type=float, default=0.01, help="PD PSM q-value cutoff for identified subsets (default: 0.01).")
     agreement.add_argument("--top-discordant", type=int, default=20, help="Discordant finite scans retained per run (default: 20).")
+    report = commands.add_parser(
+        "report",
+        help="Run Analysis, PD agreement, Validation, and create one interactive HTML report.",
+    )
+    report.add_argument("--input-dir", type=Path, required=True, help="Flat directory of converted Single-mode bundles.")
+    report.add_argument("--scoring-dir", type=Path, required=True, help="Directory containing completed score TSV outputs.")
+    report.add_argument("--reconciliation-dir", type=Path, help="Optional directory containing reconciliation TSV outputs.")
+    report.add_argument("--output-dir", type=Path, required=True, help="Directory for the complete report package.")
+    report.add_argument("--q-value-cutoff", type=float, default=0.01, help="PD PSM q-value cutoff for identified subsets (default: 0.01).")
+    report.add_argument("--top-discordant", type=int, default=20, help="Discordant finite scans retained per run (default: 20).")
+    report.add_argument("--plot-discordant-per-run", type=int, default=5, help="Exact PD-matched discordant scans embedded per run (default: 5).")
     return parser
 
 
@@ -491,15 +514,162 @@ def _run_agreement(args: argparse.Namespace) -> int:
             top_discordant=args.top_discordant,
         )
         args.output_dir.mkdir(parents=True, exist_ok=True)
-        write_tsv(args.output_dir / "pd_agreement.tsv", rows)
-        write_tsv(args.output_dir / "pd_agreement_summary.tsv", summaries)
-        write_tsv(args.output_dir / "pd_discordant_candidates.tsv", discordant)
+        write_tsv(args.output_dir / "pd_agreement.tsv", rows, fieldnames=AGREEMENT_FIELDS)
+        write_tsv(
+            args.output_dir / "pd_agreement_summary.tsv",
+            summaries,
+            fieldnames=AGREEMENT_SUMMARY_FIELDS,
+        )
+        write_tsv(
+            args.output_dir / "pd_discordant_candidates.tsv",
+            discordant,
+            fieldnames=AGREEMENT_FIELDS,
+        )
     except (BundleValidationError, AgreementError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     print(f"Wrote: {args.output_dir / 'pd_agreement.tsv'}")
     print(f"Wrote: {args.output_dir / 'pd_agreement_summary.tsv'}")
     print(f"Wrote: {args.output_dir / 'pd_discordant_candidates.tsv'}")
+    print("PD agreement is descriptive reference context only; it did not modify Spacer scores or classifications.")
+    return 0
+
+
+def _report_plot_settings(scoring_dir: Path) -> dict[str, tuple[float, int]]:
+    """Recover the scoring settings so report annotations match the score run."""
+    path = scoring_dir / "run_summary.tsv"
+    try:
+        with path.open(encoding="utf-8", newline="") as handle:
+            reader = csv.DictReader(handle, delimiter="\t")
+            required = {"run_basename", "ppm_tolerance", "max_isotopes"}
+            if reader.fieldnames is None or not required.issubset(reader.fieldnames):
+                raise ReportingError(f"{path} lacks plot-annotation settings.")
+            settings = {
+                row["run_basename"]: (float(row["ppm_tolerance"]), int(row["max_isotopes"]))
+                for row in reader
+            }
+    except (OSError, ValueError) as exc:
+        raise ReportingError(f"Cannot read plot-annotation settings from {path}: {exc}") from exc
+    if not settings or any(ppm <= 0 or isotopes < 1 for ppm, isotopes in settings.values()):
+        raise ReportingError(f"{path} has invalid plot-annotation settings.")
+    return settings
+
+
+def _run_report(args: argparse.Namespace) -> int:
+    """Create a complete, read-only report package from existing score outputs."""
+    try:
+        bundles = discover_bundles(input_path=None, input_dir=args.input_dir)
+        analysis_rows, sensitivity_rows, analysis_report = build_analysis(args.scoring_dir)
+        score_rows = read_score_rows(args.scoring_dir / "ms2_chimericity.tsv")
+        interference_rows = summarize_interference_distribution(score_rows)
+        plot_settings = _report_plot_settings(args.scoring_dir)
+        if set(plot_settings) != {bundle.run_basename for bundle in bundles}:
+            raise ReportingError("Scoring summaries and input bundles have different run basenames.")
+        agreement_rows, agreement_summaries, discordant_rows = agreement_for_bundles(
+            bundles,
+            args.scoring_dir / "ms2_chimericity.tsv",
+            q_value_cutoff=args.q_value_cutoff,
+            top_discordant=args.top_discordant,
+        )
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+        write_tsv(args.output_dir / "analysis_summary.tsv", analysis_rows)
+        write_tsv(args.output_dir / "sensitivity_group_summary.tsv", sensitivity_rows)
+        write_tsv(args.output_dir / "interference_distribution.tsv", interference_rows)
+        (args.output_dir / "analysis_report.md").write_text(analysis_report, encoding="utf-8")
+        write_tsv(
+            args.output_dir / "pd_agreement.tsv",
+            agreement_rows,
+            fieldnames=AGREEMENT_FIELDS,
+        )
+        write_tsv(
+            args.output_dir / "pd_agreement_summary.tsv",
+            agreement_summaries,
+            fieldnames=AGREEMENT_SUMMARY_FIELDS,
+        )
+        write_tsv(
+            args.output_dir / "pd_discordant_candidates.tsv",
+            discordant_rows,
+            fieldnames=AGREEMENT_FIELDS,
+        )
+        # The full agreement table has hundreds of thousands of rows on real
+        # runs. It is written above and is not needed for report plotting.
+        del agreement_rows
+        checks, validation_report = validate_completed_analysis(
+            bundles,
+            args.scoring_dir,
+            args.reconciliation_dir,
+            args.output_dir,
+        )
+        write_validation(args.output_dir, checks, validation_report)
+        agreement_by_key = {
+            (row["run_basename"], row["scan_id"]): row for row in discordant_rows
+        }
+        plot_rows: list[dict[str, object]] = []
+        if args.plot_discordant_per_run < 1:
+            raise ReportingError("--plot-discordant-per-run must be positive.")
+        plot_candidates: list[dict[str, str]] = []
+        for bundle in bundles:
+            plot_candidates.extend(
+                [
+                    row for row in discordant_rows
+                    if row["run_basename"] == bundle.run_basename
+                ][:args.plot_discordant_per_run]
+            )
+        plot_keys = {
+            (row["run_basename"], row["scan_id"]) for row in plot_candidates
+        }
+        score_by_key = {
+            (row["run_basename"], row["scan_id"]): row
+            for row in score_rows
+            if (row["run_basename"], row["scan_id"]) in plot_keys
+        }
+        del score_rows
+        for bundle in bundles:
+            selected = [
+                score_by_key[(row["run_basename"], row["scan_id"])]
+                for row in plot_candidates
+                if row["run_basename"] == bundle.run_basename
+            ]
+            if not selected:
+                continue
+            for plot in collect_scan_plot_data(
+                bundle,
+                score_rows=selected,
+                ppm_tolerance=plot_settings[bundle.run_basename][0],
+                max_isotopes=plot_settings[bundle.run_basename][1],
+                window_margin_mz=0.5,
+            ):
+                agreement = agreement_by_key[(str(plot["run_basename"]), str(plot["scan_id"]))]
+                plot.update(
+                    {
+                        "pd_isolation_interference_percent": agreement[
+                            "pd_isolation_interference_percent"
+                        ],
+                        "absolute_difference_percent_points": agreement[
+                            "absolute_difference_percent_points"
+                        ],
+                    }
+                )
+                plot_rows.append(plot)
+        write_html_report(
+            args.output_dir / "spacer_report.html",
+            analysis_rows=analysis_rows,
+            sensitivity_rows=sensitivity_rows,
+            interference_rows=interference_rows,
+            agreement_rows=agreement_summaries,
+            discordant_rows=discordant_rows,
+            validation_rows=checks,
+            plot_rows=plot_rows,
+        )
+    except (
+        AgreementError, BundleValidationError, InspectionError, ReportingError,
+        ValidationError,
+    ) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    print("Completed Analysis, PD agreement, and Validation.")
+    print(f"Wrote report package: {args.output_dir}")
+    print(f"Open interactive report: {args.output_dir / 'spacer_report.html'}")
     print("PD agreement is descriptive reference context only; it did not modify Spacer scores or classifications.")
     return 0
 
@@ -523,6 +693,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run_validation_mode(args)
     if args.command == "agreement":
         return _run_agreement(args)
+    if args.command == "report":
+        return _run_report(args)
     return _run_bundle_validation(args)
 
 

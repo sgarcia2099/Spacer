@@ -5,10 +5,19 @@
 **Input validation, idempotent RAW-to-mzML conversion, scan-level mzML /
 Proteome Discoverer reconciliation, and initial independent MS1 scoring are
 implemented and manually checked. Analysis reports, Validation diagnostics,
-optional PD agreement, and opt-in inspection are implemented; final manual
-review and release preparation remain.**
+optional PD agreement, opt-in inspection, and a one-call interactive report
+package are implemented; final manual review and release preparation remain.**
 
-The scope is now one experimental group. The repository has three Thermo RAW technical replicates and their Proteome Discoverer exports in `example_data/`. The repository now provides a packaged `spacer` CLI with `doctor`, `single`, `validate`, `convert`, `reconcile`, and `score` commands. It validates input bundles, converts only unmatched RAW files through ProteoWizard Docker, writes conversion provenance, structurally validates mzML, reconciles exact MS2 scan numbers with Proteome Discoverer exports, and implements an initial independent mzML-only MS1 precursor-interference score. Visual review is the next required stage.
+The scope is now one experimental group. The repository has three Thermo RAW
+technical replicates and their Proteome Discoverer exports in `example_data/`.
+The packaged `spacer` CLI now provides input validation, conversion,
+reconciliation, scoring, inspection, analysis, agreement, validation, and
+one-call reporting commands. It validates input bundles, converts only
+unmatched RAW files through ProteoWizard Docker, writes conversion provenance,
+structurally validates mzML, reconciles exact MS2 scan numbers with Proteome
+Discoverer exports, and implements an independent mzML-only MS1
+precursor-interference score. Manual scientific review and release
+preparation remain.
 
 ## Scope: Single mode
 
@@ -150,6 +159,16 @@ An explicit, scan-specific action creates an MS1 isolation-window stick view, MS
    strictly opt-in.
 9. **Complete:** Add controlled tests and run the three SC1 technical
    replicates after validation succeeds.
+10. **Complete:** Combine the completed Analysis, optional PD agreement, and
+    Validation steps in `spacer report`, with a self-contained interactive
+    HTML summary. The command reads existing scoring results and never rescales
+    or recalibrates them.
+11. **Complete:** Report the continuous 0–100% isolation-window interference
+    distribution separately from threshold-based labels, and embed interactive
+    MS1/MS2 plots for the selected exact PD-matched discordant scans.
+12. **Complete:** Report likely-chimeric fractions with explicit denominators
+    for scorable exact PD-spectrum-mapped scans and the narrower PD-identified
+    subset; neither denominator changes Spacer scoring.
 
 ## Completion checklist
 

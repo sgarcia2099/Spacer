@@ -9,7 +9,12 @@ import zlib
 from pathlib import Path
 
 from spacer.bundles import discover_bundles
-from spacer.inspection import export_scan_coordinates, render_scan_plot, select_candidates
+from spacer.inspection import (
+    collect_scan_plot_data,
+    export_scan_coordinates,
+    render_scan_plot,
+    select_candidates,
+)
 
 
 def _array(kind_accession: str, values: list[float]) -> str:
@@ -122,6 +127,22 @@ class InspectionTests(unittest.TestCase):
             self.assertIn("plot_generated\tfalse", paths["metadata"].read_text(encoding="utf-8"))
             self.assertIn("is_target_envelope", paths["ms1"].read_text(encoding="utf-8"))
             self.assertIn("is_transmitted_target_signal", paths["ms1"].read_text(encoding="utf-8"))
+            collected = collect_scan_plot_data(
+                bundle,
+                score_rows=[
+                    {
+                        "scan_id": "2", "precursor_mz": "500", "reported_charge": "2",
+                        "isolation_lower_mz": "499", "isolation_upper_mz": "501",
+                        "classification": "likely_chimeric", "interference_fraction": "0.5",
+                    }
+                ],
+                ppm_tolerance=20,
+                max_isotopes=3,
+                window_margin_mz=0.5,
+            )
+            self.assertEqual("2", collected[0]["scan_id"])
+            self.assertTrue(collected[0]["ms1"])
+            self.assertTrue(collected[0]["ms2"])
             if importlib.util.find_spec("matplotlib") is not None:
                 plots = render_scan_plot(paths)
                 self.assertTrue(plots["png"].is_file())

@@ -1,0 +1,61 @@
+run_basename	scan_id	agreement_status	score_classification	spacer_interference_percent	pd_isolation_interference_percent	signed_difference_percent_points	absolute_difference_percent_points	pd_identified	pd_best_q_value	pd_raw_psm_count	competitor_count
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R3	76040	matched_finite	likely_chimeric	98.3563124056	2.065814	96.2904984056	96.2904984056	false		0	5
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R3	106839	matched_finite	low_interference	3.44355327467	97.27735	-93.8337967253	93.8337967253	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R3	75948	matched_finite	likely_chimeric	98.1673084522	5.407029	92.7602794522	92.7602794522	false		0	4
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R2	73651	matched_finite	likely_chimeric	96.4076839347	4.230662	92.1770219347	92.1770219347	false		0	1
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R1	73734	matched_finite	likely_chimeric	96.2867855107	4.3780394	91.9087461107	91.9087461107	false		0	1
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R3	73599	matched_finite	likely_chimeric	96.4768861954	5.1338744	91.3430117954	91.3430117954	false		0	1
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R1	73754	matched_finite	likely_chimeric	95.701860383	6.0902867	89.611573683	89.611573683	false		0	1
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R1	2824	matched_finite	low_interference	0	88.486626	-88.486626	88.486626	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R1	30838	matched_finite	low_interference	9.61788891462	97.56849	-87.9506010854	87.9506010854	false		0	2
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R3	73873	matched_finite	low_interference	0	87.762825	-87.762825	87.762825	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R3	102475	matched_finite	likely_chimeric	95.2788760478	7.6036754	87.6752006478	87.6752006478	true	8.07428368717e-05	1	3
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R3	85515	matched_finite	low_interference	0	87.593155	-87.593155	87.593155	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R1	107078	matched_finite	low_interference	0	87.3997	-87.3997	87.3997	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R3	50061	matched_finite	likely_chimeric	95.7462220431	8.534346	87.2118760431	87.2118760431	true	8.07428368717e-05	2	2
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R1	40567	matched_finite	low_interference	0	87.13352	-87.13352	87.13352	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R1	100656	matched_finite	low_interference	0	87.07213	-87.07213	87.07213	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R3	65590	matched_finite	low_interference	10.6478681245	97.57385	-86.9259818755	86.9259818755	true	0.000111164634291	3	2
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R3	74095	matched_finite	low_interference	0	86.79727	-86.79727	86.79727	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R3	44984	matched_finite	likely_chimeric	98.0510835966	11.350057	86.7010265966	86.7010265966	false		0	3
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R2	44903	matched_finite	likely_chimeric	95.9168426774	9.293458	86.6233846774	86.6233846774	true	7.70198457758e-05	1	3
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R1	3273	matched_finite	low_interference	0	86.599205	-86.599205	86.599205	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R1	105703	matched_finite	low_interference	9.0304886721	95.17243	-86.1419413279	86.1419413279	false		0	1
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R3	27003	matched_finite	low_interference	0	86.12692	-86.12692	86.12692	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R3	16910	matched_finite	low_interference	0	85.96959	-85.96959	85.96959	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R1	52408	matched_finite	low_interference	10.4857714276	96.33879	-85.8530185724	85.8530185724	false		0	3
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R3	55658	matched_finite	low_interference	0	85.65878	-85.65878	85.65878	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R3	40625	matched_finite	low_interference	0	85.55502	-85.55502	85.55502	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R2	11639	matched_finite	likely_chimeric	96.4590078418	10.975097	85.4839108418	85.4839108418	true	7.70198457758e-05	1	1
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R1	60558	matched_finite	low_interference	0	85.4157	-85.4157	85.4157	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R3	11461	matched_finite	low_interference	0	85.33175	-85.33175	85.33175	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R1	2804	matched_finite	low_interference	3.2468420323	88.46492	-85.2180779677	85.2180779677	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R3	60120	matched_finite	low_interference	0	85.17345	-85.17345	85.17345	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R1	56426	matched_finite	low_interference	0	85.156235	-85.156235	85.156235	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R2	30467	matched_finite	likely_chimeric	95.9461091633	11.026	84.9201091633	84.9201091633	true	7.70198457758e-05	2	2
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R3	36714	matched_finite	low_interference	0	84.753914	-84.753914	84.753914	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R2	34521	matched_finite	low_interference	0	84.71257	-84.71257	84.71257	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R2	24514	matched_finite	low_interference	10.3709542944	95.05656	-84.6856057056	84.6856057056	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R2	61409	matched_finite	low_interference	0	84.64836	-84.64836	84.64836	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R3	101302	matched_finite	low_interference	0	84.59777	-84.59777	84.59777	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R1	82858	matched_finite	likely_chimeric	92.113140604	7.641025	84.472115604	84.472115604	false		0	1
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R1	74701	matched_finite	low_interference	0	84.358574	-84.358574	84.358574	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R1	104929	matched_finite	low_interference	0	84.263405	-84.263405	84.263405	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R2	31003	matched_finite	low_interference	13.5503615738	97.72715	-84.1767884262	84.1767884262	false		0	3
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R2	32959	matched_finite	low_interference	0	83.90921	-83.90921	83.90921	true	7.70198457758e-05	1	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R2	85118	matched_finite	likely_chimeric	93.56025228	9.6798115	83.88044078	83.88044078	false		0	1
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R3	84814	matched_finite	likely_chimeric	90.9723671332	7.3800206	83.5923465332	83.5923465332	false		0	1
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R2	94673	matched_finite	low_interference	0	83.55076	-83.55076	83.55076	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R2	57254	matched_finite	low_interference	0	83.47579	-83.47579	83.47579	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R1	28336	matched_finite	low_interference	0	83.08347	-83.08347	83.08347	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R2	69118	matched_finite	low_interference	0	82.999695	-82.999695	82.999695	true	7.70198457758e-05	1	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R2	47524	matched_finite	low_interference	0	82.97293	-82.97293	82.97293	true	0.000253779493505	1	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R2	43904	matched_finite	low_interference	0	82.96162	-82.96162	82.96162	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R2	52824	matched_finite	low_interference	0	82.89784	-82.89784	82.89784	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R1	92799	matched_finite	low_interference	0	82.71432	-82.71432	82.71432	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R1	36400	matched_finite	low_interference	10.7244942914	93.31711	-82.5926157086	82.5926157086	true	6.67898566462e-05	1	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R1	37418	matched_finite	low_interference	0	82.591095	-82.591095	82.591095	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R2	98940	matched_finite	low_interference	0	82.4369	-82.4369	82.4369	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R2	59517	matched_finite	likely_chimeric	93.4730175549	11.262319	82.2106985549	82.2106985549	false		0	2
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R2	61408	matched_finite	low_interference	0	82.056564	-82.056564	82.056564	false		0	0
+02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R2	36210	matched_finite	low_interference	0	82.045044	-82.045044	82.045044	false		0	0

@@ -327,6 +327,95 @@ def export_scan_coordinates(
     return {"ms1": ms1_path, "ms2": ms2_path, "metadata": metadata_path}
 
 
+def collect_scan_plot_data(
+    bundle: RunBundle, *, score_rows: list[dict[str, str]], ppm_tolerance: float,
+    max_isotopes: int, window_margin_mz: float,
+) -> list[dict[str, object]]:
+    """Collect coordinate arrays for selected scans in one pass through one mzML file."""
+    if bundle.data_format != "mzml":
+        raise InspectionError(f"Run {bundle.run_basename} requires mzML; run spacer convert first.")
+    requested: dict[int, dict[str, str]] = {}
+    for row in score_rows:
+        try:
+            scan = int(row["scan_id"])
+        except (KeyError, ValueError) as exc:
+            raise InspectionError("Selected report plot has an invalid scan ID.") from exc
+        if scan in requested:
+            raise InspectionError(f"Selected report plot duplicates scan {scan} in {bundle.run_basename}.")
+        requested[scan] = row
+    prior_ms1: tuple[int | None, tuple[float, ...], tuple[float, ...]] | None = None
+    plots: list[dict[str, object]] = []
+    try:
+        for _, spectrum in ET.iterparse(bundle.data_path, events=("end",)):
+            if _local_name(spectrum.tag) != "spectrum":
+                continue
+            params = _spectrum_params(spectrum)
+            level = _ms_level(params)
+            scan_id = _scan_number(spectrum.attrib.get("id", ""))
+            if level == 1:
+                mz, intensity = _peak_arrays(spectrum)
+                prior_ms1 = (scan_id, mz, intensity)
+            elif level == 2 and scan_id in requested:
+                if prior_ms1 is None:
+                    raise InspectionError(f"MS2 scan {scan_id} has no preceding MS1 survey scan.")
+                row = requested.pop(scan_id)
+                lower = _number(row["isolation_lower_mz"], "isolation_lower_mz")
+                upper = _number(row["isolation_upper_mz"], "isolation_upper_mz")
+                target_mz = _number(row["precursor_mz"], "precursor_mz")
+                try:
+                    charge = int(row["reported_charge"])
+                except ValueError as exc:
+                    raise InspectionError(f"Scan {scan_id} has an invalid reported charge.") from exc
+                preceding_ms1_scan_id, ms1_mz, ms1_intensity = prior_ms1
+                target_index = min(
+                    range(len(ms1_mz)),
+                    key=lambda index: abs(ms1_mz[index] - target_mz),
+                    default=None,
+                )
+                target_indices: set[int] = set()
+                if target_index is not None:
+                    target_indices = set(
+                        _envelope_indices(
+                            ms1_mz, target_index, charge, ppm_tolerance, max_isotopes
+                        )
+                    )
+                ms1_rows = _array_rows(
+                    run_basename=bundle.run_basename,
+                    scan_id=scan_id,
+                    preceding_ms1_scan_id=preceding_ms1_scan_id,
+                    mz=ms1_mz,
+                    intensity=ms1_intensity,
+                    lower=lower,
+                    upper=upper,
+                    margin=window_margin_mz,
+                    target_indices=target_indices,
+                )
+                ms2_mz, ms2_intensity = _peak_arrays(spectrum)
+                plots.append(
+                    {
+                        "run_basename": bundle.run_basename,
+                        "scan_id": str(scan_id),
+                        "preceding_ms1_scan_id": str(preceding_ms1_scan_id or ""),
+                        "isolation_lower_mz": str(lower),
+                        "isolation_upper_mz": str(upper),
+                        "classification": row["classification"],
+                        "interference_fraction": row["interference_fraction"],
+                        "ms1": ms1_rows,
+                        "ms2": [
+                            {"mz": str(mz), "intensity": str(intensity)}
+                            for mz, intensity in zip(ms2_mz, ms2_intensity, strict=True)
+                        ],
+                    }
+                )
+            spectrum.clear()
+    except (ET.ParseError, OSError, ValueError) as exc:
+        raise InspectionError(f"Cannot collect report plots from {bundle.data_path}: {exc}") from exc
+    if requested:
+        missing = ", ".join(str(scan) for scan in sorted(requested))
+        raise InspectionError(f"Selected MS2 scan(s) not found in {bundle.data_path}: {missing}.")
+    return sorted(plots, key=lambda row: int(str(row["scan_id"])))
+
+
 def render_scan_plot(paths: dict[str, Path]) -> dict[str, Path]:
     """Render an explicitly requested two-panel MS1/MS2 inspection plot."""
     try:

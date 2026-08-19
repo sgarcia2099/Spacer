@@ -5,7 +5,8 @@ available commands validate Single-mode input bundles, convert unmatched Thermo
 RAW files to structurally validated mzML files, reconcile converted MS2
 metadata with Proteome Discoverer exports, calculate independent MS1-based
 precursor-interference scores, create descriptive Analysis and Validation
-reports, and optionally inspect or compare exact-scan PD reference context.
+reports, package Analysis/Agreement/Validation into an interactive HTML report,
+and optionally inspect exact-scan PD reference context.
 
 Project design, staged implementation notes, and planned analysis behavior are
 in [misc/PLAN.md](misc/PLAN.md).
@@ -262,6 +263,56 @@ spacer agreement \
 Outputs are pd_agreement.tsv, pd_agreement_summary.tsv, and
 pd_discordant_candidates.tsv. Pass the first file to spacer inspect with
 --agreement-table to add PD-discordant scans to an opt-in candidate table.
+
+## One-call report package
+
+After `spacer score` has produced the scoring TSVs, this is the preferred
+single command for the reporting stage. It runs Analysis, descriptive PD
+agreement, and Validation in that order, then writes a self-contained,
+interactive HTML summary. It does not rescore mzML or change any existing
+score values.
+
+~~~bash
+spacer report \
+  --input-dir example_data \
+  --scoring-dir /tmp/spacer-scoring-coelution \
+  --reconciliation-dir /tmp/spacer-reconciliation \
+  --output-dir results/SC1_report \
+  --q-value-cutoff 0.01 \
+  --top-discordant 20 \
+  --plot-discordant-per-run 5
+~~~
+
+The report directory contains the TSV and Markdown outputs from all three
+steps plus `spacer_report.html`. Open the HTML file locally in a browser:
+
+~~~bash
+xdg-open results/SC1_report/spacer_report.html
+~~~
+
+The report has filterable tables for per-run analysis, sensitivity results, PD
+agreement, discordant scans, and validation checks. It also reports the
+continuous interference distribution across scorable MS2: each score is the
+non-target share of positive MS1 intensity inside the recorded isolation
+window, from 0% to 100%. `likely_chimeric` is a threshold-based label, not a
+separate measurement: the scan must meet the configured interference threshold
+and have a co-eluting peptide-like competitor. Lower scores are
+`low_interference`; missing precursor evidence or insufficient co-elution
+support produces `indeterminate`.
+
+The PD agreement summary also reports this same Spacer percentage after
+restricting the denominator to scorable MS2 with an exact PD MS/MS-spectrum
+record (the pd_spectrum_mapped row), plus the narrower q-value-passing
+identified subset. These are descriptive denominator changes only; PD does not
+alter any Spacer score or classification.
+
+The PD-matched plots tab contains MS1-window and MS2 stick plots for each
+exactly matched, finite PD scan in the selected high-discordance subset. Use
+`--plot-discordant-per-run` to control the embedded plot count per run
+(five by default); `--top-discordant` controls the larger TSV candidate list.
+The HTML includes its own data, JavaScript, and styling; it makes no network
+request and uploads no data. Proteome Discoverer remains descriptive reference
+context only, never ground truth or a calibration source for Spacer.
 
 ## Validate inputs
 

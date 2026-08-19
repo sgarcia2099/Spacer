@@ -19,6 +19,19 @@ SCORE_FIELDS = {
     "run_basename", "scan_id", "classification", "interference_fraction",
     "target_precursor_fraction", "competitor_count",
 }
+AGREEMENT_FIELDS = [
+    "run_basename", "scan_id", "agreement_status", "score_classification",
+    "spacer_interference_percent", "pd_isolation_interference_percent",
+    "signed_difference_percent_points", "absolute_difference_percent_points",
+    "pd_identified", "pd_best_q_value", "pd_raw_psm_count", "competitor_count",
+]
+AGREEMENT_SUMMARY_FIELDS = [
+    "run_basename", "subset", "score_rows", "matched_finite",
+    "pd_interference_missing", "spacer_indeterminate",
+    "scoring_without_pd_spectrum", "pearson_r", "spearman_rho",
+    "median_signed_difference_pp", "median_absolute_difference_pp",
+    "scorable_ms2", "likely_chimeric", "likely_chimeric_fraction",
+]
 
 
 def _read_scores(path: Path) -> list[dict[str, str]]:
@@ -85,6 +98,12 @@ def _summary(run: str, subset: str, rows: list[dict[str, str]], all_rows: list[d
     spacer = [pair[0] for pair in pairs]
     pd = [pair[1] for pair in pairs]
     differences = [a - b for a, b in pairs]
+    scorable = [
+        row for row in rows if row["score_classification"] != "indeterminate"
+    ]
+    likely = [
+        row for row in scorable if row["score_classification"] == "likely_chimeric"
+    ]
     return {
         "run_basename": run,
         "subset": subset,
@@ -97,6 +116,9 @@ def _summary(run: str, subset: str, rows: list[dict[str, str]], all_rows: list[d
         "spearman_rho": _format(_pearson(_rank(spacer), _rank(pd))),
         "median_signed_difference_pp": _format(statistics.median(differences) if differences else None),
         "median_absolute_difference_pp": _format(statistics.median([abs(value) for value in differences]) if differences else None),
+        "scorable_ms2": str(len(scorable)),
+        "likely_chimeric": str(len(likely)),
+        "likely_chimeric_fraction": _format(len(likely) / len(scorable) if scorable else None),
     }
 
 
@@ -162,6 +184,17 @@ def agreement_for_bundles(
             run_rows.append(row)
         agreement_rows.extend(run_rows)
         summaries.append(_summary(run, "all_matched", run_rows, run_rows))
+        summaries.append(
+            _summary(
+                run,
+                "pd_spectrum_mapped",
+                [
+                    row for row in run_rows
+                    if row["agreement_status"] != "scoring_without_pd_spectrum"
+                ],
+                run_rows,
+            )
+        )
         summaries.append(_summary(run, "identified", [row for row in run_rows if row["pd_identified"] == "true"], run_rows))
         summaries.append(_summary(run, "unidentified", [row for row in run_rows if row["pd_identified"] == "false"], run_rows))
         matched = [row for row in run_rows if row["agreement_status"] == "matched_finite"]
@@ -169,4 +202,3 @@ def agreement_for_bundles(
     return agreement_rows, summaries, sorted(
         discordant, key=lambda row: float(row["absolute_difference_percent_points"]), reverse=True
     )
-

@@ -1,0 +1,5 @@
+summary_level	run_basename	run_count	total_ms2	scorable_ms2	low_interference	likely_chimeric	indeterminate	likely_chimeric_fraction	indeterminate_fraction	replicate_likely_fraction_median	replicate_likely_fraction_min	replicate_likely_fraction_max	interference_threshold
+run	02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R1	1	85417	78465	46557	31908	6952	0.40665264767730835	0.0813889506773				0.3
+run	02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R2	1	85241	78300	46135	32165	6941	0.4107918263090677	0.081427951338				0.3
+run	02022026_SynComBench_QE1_180minGrad_100ulmin_5ug_SC1_R3	1	85099	78093	45776	32317	7006	0.41382710358162705	0.0823276419229				0.3
+single_group	single_group	3	255757	234858	138468	96390	20899	0.410418210153	0.08171428348	0.410791826309	0.406652647677	0.413827103582	0.3

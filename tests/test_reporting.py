@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from spacer.reporting import ReportingError, build_analysis
+from spacer.reporting import ReportingError, build_analysis, summarize_interference_distribution
 
 
 def _write(path: Path, header: str, rows: list[str]) -> None:
@@ -70,3 +70,19 @@ class ReportingTests(unittest.TestCase):
             )
             with self.assertRaises(ReportingError):
                 build_analysis(directory)
+
+    def test_summarizes_continuous_interference_degrees(self) -> None:
+        rows = [
+            {"run_basename": "run_1", "scan_id": "1", "classification": "low_interference", "interference_fraction": "0.05"},
+            {"run_basename": "run_1", "scan_id": "2", "classification": "likely_chimeric", "interference_fraction": "0.35"},
+            {"run_basename": "run_1", "scan_id": "3", "classification": "likely_chimeric", "interference_fraction": "0.90"},
+            {"run_basename": "run_1", "scan_id": "4", "classification": "indeterminate", "interference_fraction": ""},
+        ]
+        summary = summarize_interference_distribution(rows)
+        group = [row for row in summary if row["summary_level"] == "single_group"]
+        self.assertEqual(5, len(group))
+        self.assertEqual("3", group[0]["scorable_ms2"])
+        self.assertEqual(
+            {"0_to_under_10_percent", "30_to_under_50_percent", "75_to_100_percent"},
+            {row["interference_band"] for row in group if row["scan_count"] == "1"},
+        )

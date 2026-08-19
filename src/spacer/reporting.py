@@ -22,6 +22,13 @@ RUN_FIELDS = {
     "interference_threshold",
 }
 SENSITIVITY_FIELDS = RUN_FIELDS | {"minimum_competitor_prior_ms1_detections"}
+INTERFERENCE_BANDS = (
+    ("0_to_under_10_percent", 0.00, 0.10),
+    ("10_to_under_30_percent", 0.10, 0.30),
+    ("30_to_under_50_percent", 0.30, 0.50),
+    ("50_to_under_75_percent", 0.50, 0.75),
+    ("75_to_100_percent", 0.75, 1.00),
+)
 
 
 def _read_tsv(path: Path, required: set[str]) -> list[dict[str, str]]:
@@ -73,6 +80,66 @@ def _validate_run_row(row: dict[str, str]) -> None:
 
 def _format(value: float | None) -> str:
     return "" if value is None else f"{value:.12g}"
+
+
+def _percentile(values: list[float], fraction: float) -> float:
+    """Return an interpolated percentile without a numerical dependency."""
+    ordered = sorted(values)
+    position = (len(ordered) - 1) * fraction
+    lower = int(position)
+    upper = min(lower + 1, len(ordered) - 1)
+    return ordered[lower] + (ordered[upper] - ordered[lower]) * (position - lower)
+
+
+def summarize_interference_distribution(
+    score_rows: list[dict[str, str]],
+) -> list[dict[str, str]]:
+    """Summarize the continuous independent interference estimate by run and group."""
+    grouped: dict[str, list[float]] = {}
+    for row in score_rows:
+        if row.get("classification") == "indeterminate":
+            continue
+        try:
+            value = float(row["interference_fraction"])
+        except (KeyError, ValueError) as exc:
+            raise ReportingError(
+                f"Scorable scan {row.get('scan_id', '?')!r} has no valid interference fraction."
+            ) from exc
+        if not 0 <= value <= 1:
+            raise ReportingError(
+                f"Interference fraction is outside 0-1 for scan {row.get('scan_id', '?')!r}."
+            )
+        grouped.setdefault(row["run_basename"], []).append(value)
+    if not grouped:
+        raise ReportingError("No scorable interference fractions are available.")
+    grouped["single_group"] = [
+        value for run, values in grouped.items() if run != "single_group" for value in values
+    ]
+    rows: list[dict[str, str]] = []
+    for run, values in grouped.items():
+        for label, lower, upper in INTERFERENCE_BANDS:
+            count = sum(
+                lower <= value < upper or (upper == 1 and value == 1)
+                for value in values
+            )
+            rows.append(
+                {
+                    "summary_level": "single_group" if run == "single_group" else "run",
+                    "run_basename": run,
+                    "scorable_ms2": str(len(values)),
+                    "interference_band": label,
+                    "lower_inclusive_percent": str(100 * lower),
+                    "upper_inclusive_percent": str(100 * upper),
+                    "scan_count": str(count),
+                    "fraction_of_scorable_ms2": _format(count / len(values)),
+                    "median_interference_fraction": _format(_percentile(values, 0.5)),
+                    "p10_interference_fraction": _format(_percentile(values, 0.1)),
+                    "p25_interference_fraction": _format(_percentile(values, 0.25)),
+                    "p75_interference_fraction": _format(_percentile(values, 0.75)),
+                    "p90_interference_fraction": _format(_percentile(values, 0.9)),
+                }
+            )
+    return rows
 
 
 def build_analysis(
@@ -188,9 +255,16 @@ def build_analysis(
     return analysis_rows, sensitivity_summary, report
 
 
-def write_tsv(path: Path, rows: list[dict[str, str]]) -> None:
+def write_tsv(
+    path: Path, rows: list[dict[str, str]], *, fieldnames: list[str] | None = None
+) -> None:
+    """Write TSV rows, retaining a useful header when a result is empty."""
+    if not rows and fieldnames is None:
+        raise ReportingError(f"Cannot write {path}: there are no rows or field names.")
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(rows[0]), delimiter="\t")
+        writer = csv.DictWriter(
+            handle, fieldnames=fieldnames or list(rows[0]), delimiter="\t"
+        )
         writer.writeheader()
         writer.writerows(rows)
