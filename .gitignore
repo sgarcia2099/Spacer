@@ -1,1 +1,4 @@
 example_data/
+.venv/
+__pycache__/
+*.egg-info/
